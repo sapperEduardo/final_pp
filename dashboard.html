@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dashboard</title>
+
+<script src="auth.js"></script>
+<script>checkAuth()</script>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+.container {
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+        }
+
+body {
+  font-family: system-ui;
+  background:#f1f5f9;
+  padding:1.5rem;
+}
+
+h2 {
+  margin-bottom: 1rem;
+}
+
+/* Icons (SVG styling) */
+        .icon {
+            width: 24px;
+            height: 24px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+        
+        .header-icon {
+            width: 32px;
+            height: 32px;
+        }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit,minmax(200px,1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.card {
+  background:white;
+  padding:1rem;
+  border-radius:12px;
+  box-shadow:0 4px 12px rgba(0,0,0,.08);
+}
+
+.metric {
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.sub {
+  font-size: .85rem;
+  color: #64748b;
+}
+
+.chart-card {
+  background: white;
+  padding: 1rem;
+  border-radius: 12px;
+  box-shadow:0 4px 12px rgba(0,0,0,.08);
+}
+
+ .top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+
+.top-link:hover {
+    text-decoration: underline;
+}
+
+
+.top-logout {
+    background: transparent;
+    border: 1px solid #e2e8f0;
+    color: #475569;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.top-logout:hover {
+    background: #f1f5f9;
+}
+
+
+.top-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #2563eb;
+    text-decoration: none;
+}
+
+</style>
+</head>
+
+<body>
+
+    <div class="container">
+
+
+    <div class="top-bar ">
+  <a href="index.html" class="top-link top-logout">
+    Volver
+  </a>
+
+  <button class="top-logout" onclick="logout()">Salir</button>
+</div>
+</div>
+
+
+
+<h2>Resumen financiero</h2>
+
+<div class="grid" id="metrics"></div>
+
+<div class="chart-card">
+  <h3>Distribución de gastos por categoría</h3>
+  <canvas id="pieChart"></canvas>
+</div>
+
+<script>
+function recibirDatos(data) {
+
+  const gastos = data.filter(d => d.tipoMovimiento === 'gasto');
+  const ingresos = data.filter(d => d.tipoMovimiento === 'ingreso');
+
+  const totalGastos = gastos.reduce((a,b)=>a + Number(b.monto),0);
+  const totalIngresos = ingresos.reduce((a,b)=>a + Number(b.monto),0);
+  const balance = totalIngresos - totalGastos;
+
+  const porCategoria = {};
+  gastos.forEach(g => {
+    porCategoria[g.categoria] = (porCategoria[g.categoria] || 0) + Number(g.monto);
+  });
+
+  const topCategoria = Object.entries(porCategoria)
+    .sort((a,b)=>b[1]-a[1])[0];
+
+  document.getElementById('metrics').innerHTML = `
+    <div class="card">
+      <div class="sub">Gastos</div>
+      <div class="metric">$${totalGastos}</div>
+    </div>
+    <div class="card">
+      <div class="sub">Ingresos</div>
+      <div class="metric">$${totalIngresos}</div>
+    </div>
+    <div class="card">
+      <div class="sub">Balance</div>
+      <div class="metric">$${balance}</div>
+    </div>
+    <div class="card">
+      <div class="sub">Movimientos</div>
+      <div class="metric">${data.length}</div>
+    </div>
+    <div class="card">
+      <div class="sub">Mayor gasto</div>
+      <div class="metric">${topCategoria ? topCategoria[0] : '-'}</div>
+    </div>
+  `;
+
+  // Gráfico
+  new Chart(document.getElementById('pieChart'), {
+    type: 'pie',
+    data: {
+      labels: Object.keys(porCategoria),
+      datasets: [{
+        data: Object.values(porCategoria)
+      }]
+    }
+  });
+}
+
+// Carga de datos desde Apps Script (JSONP)
+const script = document.createElement('script');
+script.src = 'https://script.google.com/macros/s/AKfycbzMEeNAnfiW4XqlTfWIhb8Wz4AMJPbfsVJ8vToiE7nRV3ecFMuySPwsYONwJCJyvHEZ2g/exec?callback=recibirDatos';
+document.body.appendChild(script);
+</script>
+
+</body>
+</html>
